@@ -2,8 +2,8 @@
 /* eslint-disable  no-console */
 'use strict';
 
-import { Connection, ISOLATION_LEVEL, Request } from 'tedious';
-
+import { Connection, Request } from 'tedious';
+// import * as SqlString from 'sqlstring';
 
 export interface Library {
     libraryid: number;
@@ -16,73 +16,52 @@ export interface ILS {
     server: string;
     authentication: Authentication;
     options: Options;
-  }
-  export interface Authentication {
+}
+export interface Authentication {
     type: string;
     options: AuthOptions;
-  }
-  export interface AuthOptions {
+}
+export interface AuthOptions {
     userName: string;
     password: string;
-  }
-  export interface Options {
+}
+export interface Options {
     encrypt: boolean;
     database: string;
     isolationLevel: any;
-  }
-
-export function ilsConfig(): ILS {
-
-    return  {
-        ilsID: 1,
-        ilsName: 'Acquisitions',
-        server: '10.5.0.113',
-        authentication: {
-            type: 'default',
-            options: {
-                userName: 'polaris',
-                password: 'polaris'
-            }
-        },
-        options: {
-            encrypt: false,
-            database: 'Polaris',
-            isolationLevel: ISOLATION_LEVEL.READ_UNCOMMITTED
-        }
-    };
 }
 
-export function executeQuery(query, callback):void {
-    const connection = new Connection(ilsConfig);
-    const TotalRows = [];
 
-    connection.on('connect', (err) => {
-        // console.log('Connected ' + config.ilsName + ' : ' + config.server);
-        if (err) {
-            console.log(err);
-        }
-        const request = new Request(query, (err2) => {
-            if (err2) {
-                console.log(err2);
-                console.log(ilsConfig().ilsName);
-                callback(err2);
+export function executeQuery(server, query) {
+    return new Promise((resolve, reject) => {
+        const connection = new Connection(server);
+        const TotalRows = [];
+        connection.on('connect', (err) => {
+            // console.log('Connected ' + config.ilsName + ' : ' + config.server);
+            if (err) {
+                reject(err);
             }
-        });
-        request.on('row', (columns) => {
-            const row = {};
-            columns.forEach((column) => {
-                row[column.metadata.colName] = column.value;
+            const request = new Request(query, (err2) => {
+                if (err2) {
+                    reject(err2);
+                }
             });
-            TotalRows.push(row);
-            // console.log('row');
+            request.on('row', (columns) => {
+                const row = {};
+                columns.forEach((column) => {
+                    row[column.metadata.colName] = column.value;
+                });
+                TotalRows.push(row);
+                // console.log('row');
+            });
+            request.on('requestCompleted', () => {
+                resolve(TotalRows);
+                connection.close();
+            });
+            connection.execSql(request);
         });
-        request.on('requestCompleted', () => {
-            callback(null, TotalRows);
-            connection.close();
-        });
-        connection.execSql(request);
-    });
 
+    })
 }
 
 
