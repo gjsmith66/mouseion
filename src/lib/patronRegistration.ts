@@ -1,6 +1,6 @@
 import { executeQuery, ILS } from './mssqlEngine';
 import { performance } from 'perf_hooks';
-import moment = require('moment');
+import moment  from 'moment/src/lib/moment';
 
 export interface QueryObj {
     data: any;
